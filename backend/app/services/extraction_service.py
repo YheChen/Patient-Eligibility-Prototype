@@ -484,7 +484,7 @@ def _extract_driver_license_fields(result: OCRDocumentResult) -> dict[str, str]:
   }
 
 
-def _extract_insurance_front_fields(result: OCRDocumentResult) -> dict[str, str]:
+def _extract_insurance_id_fields(result: OCRDocumentResult) -> dict[str, str]:
   lines = result.lines
 
   payer_name = _find_labeled_value(
@@ -532,21 +532,14 @@ def _extract_insurance_front_fields(result: OCRDocumentResult) -> dict[str, str]
       "payer_id": payer_id,
       "member_id": member_id,
       "group_number": group_number,
-  }
-
-
-def _extract_insurance_back_fields(result: OCRDocumentResult) -> dict[str, str]:
-  lines = result.lines
-
-  return {
       "rx_bin": _normalize_identifier(
-          _find_labeled_value(lines, ["RX BIN", "BIN", "BIN #"])
+          _find_labeled_value(lines, ["RX BIN", "RXBIN", "BIN", "BIN #"])
       ),
       "rx_pcn": _normalize_identifier(
-          _find_labeled_value(lines, ["RX PCN", "PCN", "PCN #"])
+          _find_labeled_value(lines, ["RX PCN", "RXPCN", "PCN", "PCN #"])
       ),
       "rx_group": _normalize_identifier(
-          _find_labeled_value(lines, ["RX GROUP", "RX GRP", "GROUP", "GRP"])
+          _find_labeled_value(lines, ["RX GROUP", "RX GRP", "RXGRP", "GROUP", "GRP"])
       ),
   }
 
@@ -708,8 +701,7 @@ def _build_warnings(
 def extract_from_documents(documents: Sequence[StoredDocument]) -> ExtractionResponse:
   ocr_results = run_ocr_for_documents(documents)
   driver_license_result = _find_result(ocr_results, "driver_license")
-  insurance_front_result = _find_result(ocr_results, "insurance_front")
-  insurance_back_result = _find_result(ocr_results, "insurance_back")
+  insurance_id_result = _find_result(ocr_results, "insurance_id")
 
   patient_fields = _extract_driver_license_fields(
       driver_license_result
@@ -721,20 +713,10 @@ def extract_from_documents(documents: Sequence[StoredDocument]) -> ExtractionRes
           variant="unavailable",
       )
   )
-  insurance_front_fields = _extract_insurance_front_fields(
-      insurance_front_result
+  insurance_id_fields = _extract_insurance_id_fields(
+      insurance_id_result
       or OCRDocumentResult(
-          document_type="insurance_front",
-          text="",
-          lines=[],
-          confidence=0.0,
-          variant="unavailable",
-      )
-  )
-  insurance_back_fields = _extract_insurance_back_fields(
-      insurance_back_result
-      or OCRDocumentResult(
-          document_type="insurance_back",
+          document_type="insurance_id",
           text="",
           lines=[],
           confidence=0.0,
@@ -745,13 +727,13 @@ def extract_from_documents(documents: Sequence[StoredDocument]) -> ExtractionRes
   patient = normalize_patient(Patient(**patient_fields))
   insurance = normalize_insurance(
       Insurance(
-          payer_name=insurance_front_fields["payer_name"],
-          payer_id=insurance_front_fields["payer_id"],
-          member_id=insurance_front_fields["member_id"],
-          group_number=insurance_front_fields["group_number"],
-          rx_bin=insurance_back_fields["rx_bin"],
-          rx_pcn=insurance_back_fields["rx_pcn"],
-          rx_group=insurance_back_fields["rx_group"],
+          payer_name=insurance_id_fields["payer_name"],
+          payer_id=insurance_id_fields["payer_id"],
+          member_id=insurance_id_fields["member_id"],
+          group_number=insurance_id_fields["group_number"],
+          rx_bin=insurance_id_fields["rx_bin"],
+          rx_pcn=insurance_id_fields["rx_pcn"],
+          rx_group=insurance_id_fields["rx_group"],
       )
   )
 

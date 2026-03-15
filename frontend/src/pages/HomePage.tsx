@@ -68,14 +68,9 @@ function buildExtractionFormData(selectedDocuments: SelectedDocuments): FormData
     selectedDocuments.driversLicense?.name,
   );
   formData.append(
-    "insurance_front",
-    selectedDocuments.insuranceFront as Blob,
-    selectedDocuments.insuranceFront?.name,
-  );
-  formData.append(
-    "insurance_back",
-    selectedDocuments.insuranceBack as Blob,
-    selectedDocuments.insuranceBack?.name,
+    "insurance_id",
+    selectedDocuments.insuranceId as Blob,
+    selectedDocuments.insuranceId?.name,
   );
 
   return formData;
@@ -153,7 +148,7 @@ export default function HomePage() {
     const hasAllDocuments = Object.values(selectedDocuments).every(Boolean);
 
     if (!hasAllDocuments) {
-      setErrorMessage("Please select all three document images before extracting.");
+      setErrorMessage("Please select both document images before extracting.");
       return;
     }
 
@@ -246,7 +241,7 @@ export default function HomePage() {
             <div>
               <h2>Upload Documents</h2>
               <p>
-                Stage the driver&apos;s license and both insurance card sides to
+                Stage the driver&apos;s license and insurance ID to
                 kick off backend extraction.
               </p>
             </div>
@@ -273,7 +268,7 @@ export default function HomePage() {
             </p>
           ) : (
             <p className="panel__note">
-              Upload all three files, then click Extract to populate the review form.
+              Upload both files, then click Extract to populate the review form.
             </p>
           )}
         </section>

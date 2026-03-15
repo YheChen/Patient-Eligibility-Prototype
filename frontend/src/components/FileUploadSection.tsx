@@ -21,7 +21,7 @@ export default function FileUploadSection({
   onExtract,
 }: FileUploadSectionProps) {
   return (
-    <div className="panel__body">
+    <div className="panel__body panel__body--uploads">
       <div className="upload-grid">
         {DOCUMENT_FIELDS.map((field) => (
           <label className="upload-card" key={field.key}>
@@ -55,7 +55,7 @@ export default function FileUploadSection({
         ))}
       </div>
 
-      <div className="panel__actions">
+      <div className="panel__actions panel__actions--uploads">
         <button
           className="button button--primary"
           disabled={isExtracting || !canExtract}

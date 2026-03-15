@@ -37,15 +37,9 @@ export const DOCUMENT_FIELDS: DocumentFieldConfig[] = [
     accept: "image/*",
   },
   {
-    key: "insuranceFront",
-    label: "Insurance Card Front",
-    helper: "Capture payer, member, and group information.",
-    accept: "image/*",
-  },
-  {
-    key: "insuranceBack",
-    label: "Insurance Card Back",
-    helper: "Capture claims and pharmacy processing details.",
+    key: "insuranceId",
+    label: "Insurance ID",
+    helper: "Capture payer, member, group, and any visible Rx processing details.",
     accept: "image/*",
   },
 ];
@@ -174,6 +168,5 @@ export const EMPTY_REVIEW_FORM: ReviewFormValues = {
 
 export const INITIAL_SELECTED_DOCUMENTS: SelectedDocuments = {
   driversLicense: null,
-  insuranceFront: null,
-  insuranceBack: null,
+  insuranceId: null,
 };

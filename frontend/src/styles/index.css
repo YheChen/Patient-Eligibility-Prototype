@@ -165,9 +165,20 @@ button {
   gap: 1rem;
 }
 
+.panel__body--uploads {
+  gap: 1rem;
+  justify-items: center;
+}
+
 .panel__actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.panel__actions--uploads {
+  width: calc(100% - 2rem);
+  max-width: 100%;
+  margin-inline: auto;
 }
 
 .panel__note {
@@ -183,16 +194,22 @@ button {
 .upload-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: calc(100% - 2rem);
+  max-width: 100%;
+  margin-inline: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .upload-card {
   display: grid;
   gap: 0.75rem;
   padding: 1rem;
+  width: 100%;
+  margin: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 247, 251, 0.95));
+  min-height: 100%;
 }
 
 .upload-card__title {
@@ -221,16 +238,22 @@ button {
 .preview-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: calc(100% - 2rem);
+  max-width: 100%;
+  margin-inline: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .preview-card {
   display: grid;
   gap: 0.75rem;
   padding: 0.95rem;
+  width: 100%;
+  margin: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: rgba(250, 252, 255, 0.92);
+  min-height: 100%;
 }
 
 .preview-card__label {
@@ -678,6 +701,10 @@ button {
 
   .panel__actions {
     justify-content: stretch;
+  }
+
+  .panel__actions--uploads {
+    width: 100%;
   }
 
   .button {

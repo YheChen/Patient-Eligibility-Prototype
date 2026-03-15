@@ -22,27 +22,19 @@ def test_documents_extract_returns_structured_data(client, sample_png_bytes, mon
               variant="grayscale",
           ),
           OCRDocumentResult(
-              document_type="insurance_front",
+              document_type="insurance_id",
               text="",
               lines=[
                   "BLUE CROSS BLUE SHIELD OF MARYLAND",
                   "MEMBER ID XJH123456789",
                   "PAYER ID BCBSMD01",
                   "GROUP NUMBER GRP-45029",
-              ],
-              confidence=86.0,
-              variant="grayscale",
-          ),
-          OCRDocumentResult(
-              document_type="insurance_back",
-              text="",
-              lines=[
                   "RX BIN 610279",
                   "RX PCN 03200000",
                   "RX GROUP MDRX01",
               ],
-              confidence=83.0,
-              variant="thresholded",
+              confidence=86.0,
+              variant="grayscale",
           ),
       ]
 
@@ -53,8 +45,7 @@ def test_documents_extract_returns_structured_data(client, sample_png_bytes, mon
 
   files = {
       "driver_license": ("drivers-license.png", sample_png_bytes, "image/png"),
-      "insurance_front": ("insurance-front.png", sample_png_bytes, "image/png"),
-      "insurance_back": ("insurance-back.png", sample_png_bytes, "image/png"),
+      "insurance_id": ("insurance-id.png", sample_png_bytes, "image/png"),
   }
 
   response = client.post("/api/documents/extract", files=files)
@@ -68,7 +59,7 @@ def test_documents_extract_returns_structured_data(client, sample_png_bytes, mon
   assert payload["insurance"]["memberId"] == "XJH123456789"
   assert payload["insurance"]["rxBin"] == "610279"
   assert payload["confidence"] > 0.8
-  assert len(payload["documentNotes"]) == 3
+  assert len(payload["documentNotes"]) == 2
   assert payload["missingFields"] == []
   assert payload["warnings"][0]["code"] == "OCR-REVIEW"
 
@@ -89,20 +80,11 @@ def test_documents_extract_reports_missing_fields(client, sample_png_bytes, monk
               variant="grayscale",
           ),
           OCRDocumentResult(
-              document_type="insurance_front",
-              text="",
-              lines=[
-                  "MEMBER ID XJH123456789",
-              ],
-              confidence=38.0,
-              variant="grayscale",
-          ),
-          OCRDocumentResult(
-              document_type="insurance_back",
+              document_type="insurance_id",
               text="",
               lines=[],
               confidence=0.0,
-              variant="thresholded",
+              variant="grayscale",
           ),
       ]
 
@@ -113,8 +95,7 @@ def test_documents_extract_reports_missing_fields(client, sample_png_bytes, monk
 
   files = {
       "driver_license": ("drivers-license.png", sample_png_bytes, "image/png"),
-      "insurance_front": ("insurance-front.png", sample_png_bytes, "image/png"),
-      "insurance_back": ("insurance-back.png", sample_png_bytes, "image/png"),
+      "insurance_id": ("insurance-id.png", sample_png_bytes, "image/png"),
   }
 
   response = client.post("/api/documents/extract", files=files)
@@ -125,6 +106,7 @@ def test_documents_extract_reports_missing_fields(client, sample_png_bytes, monk
 
   assert "dateOfBirth" in payload["missingFields"]
   assert "payerName" in payload["missingFields"]
+  assert "memberId" in payload["missingFields"]
   assert "rxBin" in payload["missingFields"]
   warning_codes = {warning["code"] for warning in payload["warnings"]}
   assert "OCR-NO-TEXT" in warning_codes
