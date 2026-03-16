@@ -1,4 +1,7 @@
-export type DocumentKind = "driversLicense" | "insuranceId";
+export type DocumentKind =
+  | "driversLicense"
+  | "insuranceFront"
+  | "insuranceBack";
 
 export type WarningSeverity = "info" | "warning" | "critical";
 export type VerificationStatus = "verified" | "pending" | "manual_review";
@@ -23,6 +26,11 @@ export interface Insurance {
   rxBin: string;
   rxPcn: string;
   rxGroup: string;
+  memberPhone: string;
+  providerPhone: string;
+  providerWebsite: string;
+  pharmacyPhone: string;
+  pharmacyClaimsAddress: string;
 }
 
 export interface Warning {
@@ -87,5 +95,6 @@ export interface ReviewFormValues extends Patient, Insurance {}
 
 export interface SelectedDocuments {
   driversLicense: File | null;
-  insuranceId: File | null;
+  insuranceFront: File | null;
+  insuranceBack: File | null;
 }

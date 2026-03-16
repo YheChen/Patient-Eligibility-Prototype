@@ -25,4 +25,9 @@ def normalize_insurance(insurance: Insurance) -> Insurance:
       rx_bin=normalize_whitespace(insurance.rx_bin),
       rx_pcn=normalize_whitespace(insurance.rx_pcn).upper(),
       rx_group=normalize_whitespace(insurance.rx_group).upper(),
+      member_phone=normalize_whitespace(insurance.member_phone),
+      provider_phone=normalize_whitespace(insurance.provider_phone),
+      provider_website=normalize_whitespace(insurance.provider_website).lower(),
+      pharmacy_phone=normalize_whitespace(insurance.pharmacy_phone),
+      pharmacy_claims_address=normalize_whitespace(insurance.pharmacy_claims_address),
   )

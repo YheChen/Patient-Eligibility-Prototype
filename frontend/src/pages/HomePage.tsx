@@ -6,6 +6,7 @@ import { verifyEligibility } from "../api/verification";
 import ErrorBanner from "../components/ErrorBanner";
 import ExtractionReviewForm from "../components/ExtractionReviewForm";
 import FileUploadSection from "../components/FileUploadSection";
+import JsonSummaryViewer from "../components/JsonSummaryViewer";
 import Layout from "../components/Layout";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Raw271Viewer from "../components/Raw271Viewer";
@@ -55,6 +56,11 @@ function buildVerificationRequest(
       rxBin: values.rxBin,
       rxPcn: values.rxPcn,
       rxGroup: values.rxGroup,
+      memberPhone: values.memberPhone,
+      providerPhone: values.providerPhone,
+      providerWebsite: values.providerWebsite,
+      pharmacyPhone: values.pharmacyPhone,
+      pharmacyClaimsAddress: values.pharmacyClaimsAddress,
     },
   };
 }
@@ -68,9 +74,14 @@ function buildExtractionFormData(selectedDocuments: SelectedDocuments): FormData
     selectedDocuments.driversLicense?.name,
   );
   formData.append(
-    "insurance_id",
-    selectedDocuments.insuranceId as Blob,
-    selectedDocuments.insuranceId?.name,
+    "insurance_front",
+    selectedDocuments.insuranceFront as Blob,
+    selectedDocuments.insuranceFront?.name,
+  );
+  formData.append(
+    "insurance_back",
+    selectedDocuments.insuranceBack as Blob,
+    selectedDocuments.insuranceBack?.name,
   );
 
   return formData;
@@ -148,7 +159,7 @@ export default function HomePage() {
     const hasAllDocuments = Object.values(selectedDocuments).every(Boolean);
 
     if (!hasAllDocuments) {
-      setErrorMessage("Please select both document images before extracting.");
+      setErrorMessage("Please select all three document images before extracting.");
       return;
     }
 
@@ -241,7 +252,7 @@ export default function HomePage() {
             <div>
               <h2>Upload Documents</h2>
               <p>
-                Stage the driver&apos;s license and insurance ID to
+                Stage the driver&apos;s license plus the insurance card front and back to
                 kick off backend extraction.
               </p>
             </div>
@@ -268,7 +279,7 @@ export default function HomePage() {
             </p>
           ) : (
             <p className="panel__note">
-              Upload both files, then click Extract to populate the review form.
+              Upload all three images, then click Extract to populate the review form.
             </p>
           )}
         </section>
@@ -337,6 +348,13 @@ export default function HomePage() {
               <Raw271Viewer raw271={verificationResponse?.raw271 ?? null} />
             </article>
           </div>
+
+          <article className="summary-card">
+            <h3>Structured JSON Summary</h3>
+            <JsonSummaryViewer
+              summary={verificationResponse?.summary ?? null}
+            />
+          </article>
         </section>
       </div>
     </Layout>

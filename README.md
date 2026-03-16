@@ -6,7 +6,7 @@ Prototype repository for the MDLand hiring take-home
 
 The current demo supports this end-to-end flow:
 
-1. Upload a driver's license and insurance ID.
+1. Upload a driver's license plus the insurance card front and back.
 2. Send the files to a FastAPI backend extract endpoint.
 3. Review and edit the returned patient and insurance fields in the React UI.
 4. Submit the edited values to a verification endpoint.

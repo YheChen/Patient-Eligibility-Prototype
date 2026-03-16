@@ -9,3 +9,8 @@ class Insurance(APIModel):
   rx_bin: str = ""
   rx_pcn: str = ""
   rx_group: str = ""
+  member_phone: str = ""
+  provider_phone: str = ""
+  provider_website: str = ""
+  pharmacy_phone: str = ""
+  pharmacy_claims_address: str = ""

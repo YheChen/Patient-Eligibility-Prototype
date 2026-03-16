@@ -83,7 +83,10 @@ def _build_inactive_result(request: VerificationRequest) -> RuleEngineResult:
   )
 
 
-def _build_manual_review_result(request: VerificationRequest) -> RuleEngineResult:
+def _build_manual_review_result(
+    request: VerificationRequest,
+    warning: Warning,
+) -> RuleEngineResult:
   patient = normalize_patient(request.patient)
 
   return RuleEngineResult(
@@ -96,13 +99,7 @@ def _build_manual_review_result(request: VerificationRequest) -> RuleEngineResul
           pharmacy="Manual review",
       ),
       pharmacy_info=_build_pharmacy_info(request),
-      warnings=[
-          Warning(
-              code="MEMBER-ID-MISSING",
-              message="Member ID is required before eligibility can be verified.",
-              severity="critical",
-          )
-      ],
+      warnings=[warning],
       returned_patient=patient,
   )
 
@@ -114,7 +111,14 @@ def evaluate_eligibility(request: VerificationRequest) -> RuleEngineResult:
   member_id = request.insurance.member_id
 
   if not member_id:
-      return _build_manual_review_result(request)
+      return _build_manual_review_result(
+          request,
+          Warning(
+              code="MEMBER-ID-MISSING",
+              message="Member ID is required before eligibility can be verified.",
+              severity="critical",
+          ),
+      )
 
   if member_id in KNOWN_INACTIVE_MEMBER_IDS:
       return _build_inactive_result(request)
@@ -122,4 +126,11 @@ def evaluate_eligibility(request: VerificationRequest) -> RuleEngineResult:
   if member_id in KNOWN_ACTIVE_MEMBER_IDS or member_id.startswith("XJH"):
       return _build_active_result(request)
 
-  return _build_manual_review_result(request)
+  return _build_manual_review_result(
+      request,
+      Warning(
+          code="ELIGIBILITY-REVIEW-REQUIRED",
+          message="No deterministic demo match was found for this member ID. Review eligibility manually.",
+          severity="warning",
+      ),
+  )

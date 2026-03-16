@@ -35,9 +35,15 @@ export const DOCUMENT_FIELDS: DocumentFieldConfig[] = [
     accept: "image/*",
   },
   {
-    key: "insuranceId",
-    label: "Insurance ID",
-    helper: "Capture payer, member, group, and any visible Rx processing details.",
+    key: "insuranceFront",
+    label: "Insurance Card Front",
+    helper: "Capture payer, member, group, and printed pharmacy routing details.",
+    accept: "image/*",
+  },
+  {
+    key: "insuranceBack",
+    label: "Insurance Card Back",
+    helper: "Supplement claims, pharmacy, and support details from the card back.",
     accept: "image/*",
   },
 ];
@@ -121,6 +127,31 @@ export const INSURANCE_FIELDS: InsuranceFieldConfig[] = [
     label: "Rx Group",
     autoComplete: "off",
   },
+  {
+    key: "memberPhone",
+    label: "Member Phone",
+    autoComplete: "tel",
+  },
+  {
+    key: "providerPhone",
+    label: "Provider Phone",
+    autoComplete: "tel",
+  },
+  {
+    key: "providerWebsite",
+    label: "Provider Website",
+    autoComplete: "url",
+  },
+  {
+    key: "pharmacyPhone",
+    label: "Pharmacy Phone",
+    autoComplete: "tel",
+  },
+  {
+    key: "pharmacyClaimsAddress",
+    label: "Pharmacy Claims Address",
+    autoComplete: "street-address",
+  },
 ];
 
 export const EMPTY_PATIENT: Patient = {
@@ -142,6 +173,11 @@ export const EMPTY_INSURANCE: Insurance = {
   rxBin: "",
   rxPcn: "",
   rxGroup: "",
+  memberPhone: "",
+  providerPhone: "",
+  providerWebsite: "",
+  pharmacyPhone: "",
+  pharmacyClaimsAddress: "",
 };
 
 export const EMPTY_REVIEW_FORM: ReviewFormValues = {
@@ -151,5 +187,6 @@ export const EMPTY_REVIEW_FORM: ReviewFormValues = {
 
 export const INITIAL_SELECTED_DOCUMENTS: SelectedDocuments = {
   driversLicense: null,
-  insuranceId: null,
+  insuranceFront: null,
+  insuranceBack: null,
 };

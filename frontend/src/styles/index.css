@@ -197,7 +197,7 @@ button {
   width: calc(100% - 2rem);
   max-width: 100%;
   margin-inline: auto;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .upload-card {
@@ -241,7 +241,7 @@ button {
   width: calc(100% - 2rem);
   max-width: 100%;
   margin-inline: auto;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .preview-card {
@@ -392,6 +392,7 @@ button {
 .stat-card,
 .summary-card {
   padding: 1rem;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.92);
@@ -491,6 +492,7 @@ button {
   gap: 1rem;
   margin-top: 1rem;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
 }
 
 .warning-list,
@@ -576,6 +578,9 @@ button {
 }
 
 .raw-viewer {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
@@ -591,12 +596,51 @@ button {
 .raw-viewer pre {
   margin: 0;
   padding: 1rem;
+  max-width: 100%;
   overflow-x: auto;
   border-top: 1px solid var(--border);
   background: #132033;
   color: #eff6ff;
   font-size: 0.85rem;
   line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.json-viewer {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fcfdff;
+}
+
+.json-viewer__note {
+  margin: 0;
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.json-viewer__note code {
+  font-family: "SFMono-Regular", "SF Mono", "Menlo", monospace;
+  color: var(--text);
+}
+
+.json-viewer pre {
+  margin: 0;
+  padding: 1rem;
+  max-width: 100%;
+  overflow-x: auto;
+  background: #132033;
+  color: #eff6ff;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .loading-spinner,

@@ -46,6 +46,13 @@ STREET_ADDRESS_REGEX = re.compile(
     r"\d+\s+[A-Za-z0-9.#'\- ]+\b(?:ST|STREET|RD|ROAD|AVE|AVENUE|BLVD|DR|DRIVE|LN|LANE|CT|COURT|PL|PLACE|PKWY|PARKWAY|WAY|CIR|CIRCLE)\b",
     re.IGNORECASE,
 )
+PHONE_REGEX = re.compile(
+    r"(?:\+?1[-.\s]*)?\(?(\d{3})\)?[-.\s]*(\d{3})[-.\s]*(\d{4})"
+)
+WEBSITE_REGEX = re.compile(
+    r"\b(?:https?://)?(?:www\.)?[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?:/[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=-]*)?\b",
+    re.IGNORECASE,
+)
 
 LABEL_HINTS = (
     "NAME",
@@ -211,6 +218,20 @@ ADDRESS_SUFFIX_TOKENS = {
     "CIRCLE",
     "REET",
 }
+GENERIC_PAYER_NAME_TOKENS = {
+    "CO",
+    "COMPANY",
+    "CORP",
+    "CORPORATION",
+    "HEALTH",
+    "INC",
+    "INCORPORATED",
+    "INSURANCE",
+    "LIMITED",
+    "LLC",
+    "LTD",
+    "PLAN",
+}
 
 FIELD_NAME_MAP = {
     "first_name": "firstName",
@@ -228,6 +249,11 @@ FIELD_NAME_MAP = {
     "rx_bin": "rxBin",
     "rx_pcn": "rxPcn",
     "rx_group": "rxGroup",
+    "member_phone": "memberPhone",
+    "provider_phone": "providerPhone",
+    "provider_website": "providerWebsite",
+    "pharmacy_phone": "pharmacyPhone",
+    "pharmacy_claims_address": "pharmacyClaimsAddress",
 }
 
 
@@ -246,7 +272,11 @@ OCR_CONFIGS_BY_DOCUMENT = {
         ("psm11", "--oem 3 --psm 11"),
         ("psm6", "--oem 3 --psm 6"),
     ],
-    "insurance_id": [
+    "insurance_front": [
+        ("psm6", "--oem 3 --psm 6"),
+        ("psm11", "--oem 3 --psm 11"),
+    ],
+    "insurance_back": [
         ("psm6", "--oem 3 --psm 6"),
         ("psm11", "--oem 3 --psm 11"),
     ],
@@ -309,6 +339,25 @@ def _dedupe_lines(lines: Sequence[str]) -> list[str]:
           deduped.append(cleaned)
 
   return deduped
+
+
+def _normalize_phone(value: str) -> str:
+  match = PHONE_REGEX.search(value)
+
+  if not match:
+      return ""
+
+  return f"{match.group(1)}-{match.group(2)}-{match.group(3)}"
+
+
+def _normalize_website(value: str) -> str:
+  match = WEBSITE_REGEX.search(value)
+
+  if not match:
+      return ""
+
+  cleaned = match.group(0).lower()
+  return cleaned.removeprefix("http://").removeprefix("https://").removeprefix("www.")
 
 
 def _average_confidence(ocr_data: dict[str, Any]) -> float:
@@ -435,8 +484,8 @@ def _candidate_signal_score(result: OCRDocumentResult) -> int:
 
       return score
 
-  if result.document_type == "insurance_id":
-      fields = _extract_insurance_id_fields(result)
+  if result.document_type == "insurance_front":
+      fields = _extract_insurance_card_fields(result)
       score = 0
 
       if fields["payer_name"]:
@@ -453,6 +502,23 @@ def _candidate_signal_score(result: OCRDocumentResult) -> int:
           score += 1
       if fields["rx_group"]:
           score += 1
+
+      return score
+
+  if result.document_type == "insurance_back":
+      fields = _extract_insurance_back_fields(result)
+      score = 0
+
+      if fields["member_phone"]:
+          score += 2
+      if fields["provider_phone"]:
+          score += 2
+      if fields["provider_website"]:
+          score += 2
+      if fields["pharmacy_phone"]:
+          score += 2
+      if fields["pharmacy_claims_address"]:
+          score += 3
 
       return score
 
@@ -1214,6 +1280,114 @@ def _extract_text_by_patterns(
   return ""
 
 
+def _find_phone_value(lines: list[str], labels: list[str]) -> str:
+  ordered_labels = sorted(labels, key=len, reverse=True)
+
+  for index, line in enumerate(lines):
+      upper_line = line.upper()
+
+      for label in ordered_labels:
+          if label.upper() not in upper_line:
+              continue
+
+          inline_value = _extract_inline_label_value(line, label)
+
+          if inline_value:
+              normalized = _normalize_phone(inline_value)
+
+              if normalized:
+                  return normalized
+
+          normalized_line = _normalize_phone(line)
+
+          if normalized_line:
+              return normalized_line
+
+          for offset in range(1, 3):
+              next_index = index + offset
+
+              if next_index >= len(lines):
+                  break
+
+              normalized_next_line = _normalize_phone(lines[next_index])
+
+              if normalized_next_line:
+                  return normalized_next_line
+
+  return ""
+
+
+def _find_website_value(lines: list[str], labels: list[str]) -> str:
+  ordered_labels = sorted(labels, key=len, reverse=True)
+
+  for index, line in enumerate(lines):
+      upper_line = line.upper()
+
+      for label in ordered_labels:
+          if label.upper() not in upper_line:
+              continue
+
+          inline_value = _extract_inline_label_value(line, label)
+
+          if inline_value:
+              normalized = _normalize_website(inline_value)
+
+              if normalized:
+                  return normalized
+
+          normalized_line = _normalize_website(line)
+
+          if normalized_line:
+              return normalized_line
+
+          for offset in range(1, 3):
+              next_index = index + offset
+
+              if next_index >= len(lines):
+                  break
+
+              normalized_next_line = _normalize_website(lines[next_index])
+
+              if normalized_next_line:
+                  return normalized_next_line
+
+  return ""
+
+
+def _find_multiline_label_value(lines: list[str], labels: list[str], lookahead: int = 2) -> str:
+  ordered_labels = sorted(labels, key=len, reverse=True)
+
+  for index, line in enumerate(lines):
+      upper_line = line.upper()
+
+      for label in ordered_labels:
+          if label.upper() not in upper_line:
+              continue
+
+          inline_value = _extract_inline_label_value(line, label)
+
+          if inline_value:
+              return inline_value
+
+          collected_lines: list[str] = []
+
+          for offset in range(1, lookahead + 1):
+              next_index = index + offset
+
+              if next_index >= len(lines):
+                  break
+
+              candidate = _clean_ocr_line(lines[next_index])
+
+              if candidate and not _looks_like_label(candidate):
+                  collected_lines.append(candidate)
+
+          if collected_lines:
+              return " ".join(collected_lines)
+
+  return ""
+
+
 def _sanitize_payer_name(value: str) -> str:
   cleaned = _clean_ocr_line(value)
   upper_cleaned = cleaned.upper()
@@ -1226,11 +1400,36 @@ def _sanitize_payer_name(value: str) -> str:
   if payer_hint_positions:
       cleaned = cleaned[min(payer_hint_positions):]
 
+  cleaned = re.sub(
+      r"^(?:UNDERWRITTEN|ADMINISTERED|INSURED)\s+BY\s+",
+      "",
+      cleaned,
+      flags=re.IGNORECASE,
+  )
   cleaned = re.sub(r"^[A-Za-z]{1,2}[\)\].:-]+\s*", "", cleaned)
   cleaned = re.sub(r"^[^A-Za-z0-9]+", "", cleaned)
   cleaned = re.sub(r"[^A-Za-z0-9]+$", "", cleaned)
   cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+  if not _is_plausible_payer_name(cleaned):
+      return ""
+
   return cleaned
+
+
+def _is_plausible_payer_name(value: str) -> bool:
+  tokens = _alpha_tokens(value)
+
+  if not tokens:
+      return False
+
+  if all(token in GENERIC_PAYER_NAME_TOKENS for token in tokens):
+      return False
+
+  if len(tokens) == 1 and tokens[0] in GENERIC_PAYER_NAME_TOKENS:
+      return False
+
+  return True
 
 
 def _is_plausible_person_name(
@@ -1338,7 +1537,7 @@ def _extract_driver_license_fields(result: OCRDocumentResult) -> dict[str, str]:
   }
 
 
-def _extract_insurance_id_fields(result: OCRDocumentResult) -> dict[str, str]:
+def _extract_insurance_card_fields(result: OCRDocumentResult) -> dict[str, str]:
   lines = result.lines
 
   payer_name = _sanitize_payer_name(
@@ -1438,6 +1637,63 @@ def _extract_insurance_id_fields(result: OCRDocumentResult) -> dict[str, str]:
               r"\bRXGRP\b[\s:#-]*([A-Za-z0-9-]+)",
           ],
       ),
+      "member_phone": "",
+      "provider_phone": "",
+      "provider_website": "",
+      "pharmacy_phone": "",
+      "pharmacy_claims_address": "",
+  }
+
+
+def _extract_insurance_back_fields(result: OCRDocumentResult) -> dict[str, str]:
+  lines = result.lines
+
+  member_phone = _find_phone_value(lines, ["PHONE", "MEMBER PHONE"])
+  provider_phone = _find_phone_value(lines, ["PROVIDERS", "PROVIDER"])
+  provider_website = _find_website_value(lines, ["PROVIDERS", "PROVIDER", "WEB"])
+  pharmacy_phone = _find_phone_value(lines, ["PHARMACISTS", "PHARMACY"])
+  pharmacy_claims_address = _find_multiline_label_value(
+      lines,
+      ["PHARMACY CLAIMS", "PHARMACY CLAIM"],
+      lookahead=2,
+  )
+
+  return {
+      "payer_name": "",
+      "payer_id": "",
+      "member_id": "",
+      "group_number": "",
+      "rx_bin": "",
+      "rx_pcn": "",
+      "rx_group": "",
+      "member_phone": member_phone,
+      "provider_phone": provider_phone,
+      "provider_website": provider_website,
+      "pharmacy_phone": pharmacy_phone,
+      "pharmacy_claims_address": pharmacy_claims_address,
+  }
+
+
+def _merge_insurance_card_fields(
+    primary_fields: dict[str, str],
+    supplemental_fields: dict[str, str],
+) -> dict[str, str]:
+  return {
+      field_name: primary_fields.get(field_name) or supplemental_fields.get(field_name, "")
+      for field_name in (
+          "payer_name",
+          "payer_id",
+          "member_id",
+          "group_number",
+          "rx_bin",
+          "rx_pcn",
+          "rx_group",
+          "member_phone",
+          "provider_phone",
+          "provider_website",
+          "pharmacy_phone",
+          "pharmacy_claims_address",
+      )
   }
 
 
@@ -1497,6 +1753,11 @@ def _build_missing_fields(patient: Patient, insurance: Insurance) -> list[str]:
       "rx_bin": insurance.rx_bin,
       "rx_pcn": insurance.rx_pcn,
       "rx_group": insurance.rx_group,
+      "member_phone": insurance.member_phone,
+      "provider_phone": insurance.provider_phone,
+      "provider_website": insurance.provider_website,
+      "pharmacy_phone": insurance.pharmacy_phone,
+      "pharmacy_claims_address": insurance.pharmacy_claims_address,
   }
 
   return [
@@ -1612,7 +1873,8 @@ def _build_warnings(
 def extract_from_documents(documents: Sequence[StoredDocument]) -> ExtractionResponse:
   ocr_results = run_ocr_for_documents(documents)
   driver_license_result = _find_result(ocr_results, "driver_license")
-  insurance_id_result = _find_result(ocr_results, "insurance_id")
+  insurance_front_result = _find_result(ocr_results, "insurance_front")
+  insurance_back_result = _find_result(ocr_results, "insurance_back")
 
   patient_fields = _extract_driver_license_fields(
       driver_license_result
@@ -1624,28 +1886,47 @@ def extract_from_documents(documents: Sequence[StoredDocument]) -> ExtractionRes
           variant="unavailable",
       )
   )
-  insurance_id_fields = _extract_insurance_id_fields(
-      insurance_id_result
+  insurance_front_fields = _extract_insurance_card_fields(
+      insurance_front_result
       or OCRDocumentResult(
-          document_type="insurance_id",
+          document_type="insurance_front",
           text="",
           lines=[],
           confidence=0.0,
           variant="unavailable",
       )
   )
+  insurance_back_fields = _extract_insurance_back_fields(
+      insurance_back_result
+      or OCRDocumentResult(
+          document_type="insurance_back",
+          text="",
+          lines=[],
+          confidence=0.0,
+          variant="unavailable",
+      )
+  )
+  insurance_fields = _merge_insurance_card_fields(
+      insurance_front_fields,
+      insurance_back_fields,
+  )
 
   patient = normalize_patient(Patient(**patient_fields))
   patient, plausibility_flags = _apply_plausibility_checks(patient)
   insurance = normalize_insurance(
       Insurance(
-          payer_name=insurance_id_fields["payer_name"],
-          payer_id=insurance_id_fields["payer_id"],
-          member_id=insurance_id_fields["member_id"],
-          group_number=insurance_id_fields["group_number"],
-          rx_bin=insurance_id_fields["rx_bin"],
-          rx_pcn=insurance_id_fields["rx_pcn"],
-          rx_group=insurance_id_fields["rx_group"],
+          payer_name=insurance_fields["payer_name"],
+          payer_id=insurance_fields["payer_id"],
+          member_id=insurance_fields["member_id"],
+          group_number=insurance_fields["group_number"],
+          rx_bin=insurance_fields["rx_bin"],
+          rx_pcn=insurance_fields["rx_pcn"],
+          rx_group=insurance_fields["rx_group"],
+          member_phone=insurance_fields["member_phone"],
+          provider_phone=insurance_fields["provider_phone"],
+          provider_website=insurance_fields["provider_website"],
+          pharmacy_phone=insurance_fields["pharmacy_phone"],
+          pharmacy_claims_address=insurance_fields["pharmacy_claims_address"],
       )
   )
 

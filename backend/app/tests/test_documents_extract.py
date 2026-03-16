@@ -21,17 +21,31 @@ def test_documents_extract_returns_structured_data(client, sample_png_bytes, mon
               variant="grayscale",
           ),
           OCRDocumentResult(
-              document_type="insurance_id",
+              document_type="insurance_front",
               text="",
               lines=[
-                  "() UnitedHealthcare",
-                  "MEMBER ID XJH123456789 GROUP NUMBER GRP-45029",
+                  "Oxford Freedom Network",
+                  "UnitedHealthcare",
+                  "MEMBER ID XJH123456789",
                   "PAYER ID 87726",
+                  "GROUP NUMBER GRP-45029",
                   "RX BIN 610279",
                   "RX PCN 9999",
                   "RX GROUP NUMBER98765",
               ],
               confidence=86.0,
+              variant="grayscale",
+          ),
+          OCRDocumentResult(
+              document_type="insurance_back",
+              text="",
+              lines=[
+                  "Phone: 888-201-4709",
+                  "Providers: 800-666-1353 or uhcprovider.com",
+                  "Pharmacists: 888-290-5416",
+                  "Pharmacy Claims: Optum Rx, PO Box 29044, Hot Springs, AR 71903",
+              ],
+              confidence=79.0,
               variant="grayscale",
           ),
       ]
@@ -43,7 +57,8 @@ def test_documents_extract_returns_structured_data(client, sample_png_bytes, mon
 
   files = {
       "driver_license": ("drivers-license.png", sample_png_bytes, "image/png"),
-      "insurance_id": ("insurance-id.png", sample_png_bytes, "image/png"),
+      "insurance_front": ("insurance-front.png", sample_png_bytes, "image/png"),
+      "insurance_back": ("insurance-back.png", sample_png_bytes, "image/png"),
   }
 
   response = client.post("/api/documents/extract", files=files)
@@ -63,8 +78,16 @@ def test_documents_extract_returns_structured_data(client, sample_png_bytes, mon
   assert payload["insurance"]["rxBin"] == "610279"
   assert payload["insurance"]["rxPcn"] == "9999"
   assert payload["insurance"]["rxGroup"] == "98765"
+  assert payload["insurance"]["memberPhone"] == "888-201-4709"
+  assert payload["insurance"]["providerPhone"] == "800-666-1353"
+  assert payload["insurance"]["providerWebsite"] == "uhcprovider.com"
+  assert payload["insurance"]["pharmacyPhone"] == "888-290-5416"
+  assert (
+      payload["insurance"]["pharmacyClaimsAddress"]
+      == "Optum Rx, PO Box 29044, Hot Springs, AR 71903"
+  )
   assert payload["confidence"] > 0.8
-  assert len(payload["documentNotes"]) == 2
+  assert len(payload["documentNotes"]) == 3
   assert payload["missingFields"] == []
   assert payload["warnings"][0]["code"] == "OCR-REVIEW"
 
@@ -85,7 +108,14 @@ def test_documents_extract_reports_missing_fields(client, sample_png_bytes, monk
               variant="grayscale",
           ),
           OCRDocumentResult(
-              document_type="insurance_id",
+              document_type="insurance_front",
+              text="",
+              lines=[],
+              confidence=0.0,
+              variant="grayscale",
+          ),
+          OCRDocumentResult(
+              document_type="insurance_back",
               text="",
               lines=[],
               confidence=0.0,
@@ -100,7 +130,8 @@ def test_documents_extract_reports_missing_fields(client, sample_png_bytes, monk
 
   files = {
       "driver_license": ("drivers-license.png", sample_png_bytes, "image/png"),
-      "insurance_id": ("insurance-id.png", sample_png_bytes, "image/png"),
+      "insurance_front": ("insurance-front.png", sample_png_bytes, "image/png"),
+      "insurance_back": ("insurance-back.png", sample_png_bytes, "image/png"),
   }
 
   response = client.post("/api/documents/extract", files=files)
@@ -140,7 +171,7 @@ def test_documents_extract_rejects_implausible_driver_license_fields(
               variant="upscaled:psm11",
           ),
           OCRDocumentResult(
-              document_type="insurance_id",
+              document_type="insurance_front",
               text="",
               lines=[
                   "i) UnitedHealthcare",
@@ -154,6 +185,18 @@ def test_documents_extract_rejects_implausible_driver_license_fields(
               confidence=89.0,
               variant="grayscale:psm6",
           ),
+          OCRDocumentResult(
+              document_type="insurance_back",
+              text="",
+              lines=[
+                  "Phone: 888-201-4709",
+                  "Providers: 800-666-1353 or uhcprovider.com",
+                  "Pharmacists: 888-290-5416",
+                  "Pharmacy Claims: Optum Rx, PO Box 29044, Hot Springs, AR 71903",
+              ],
+              confidence=84.0,
+              variant="grayscale:psm6",
+          ),
       ]
 
   monkeypatch.setattr(
@@ -163,7 +206,8 @@ def test_documents_extract_rejects_implausible_driver_license_fields(
 
   files = {
       "driver_license": ("drivers-license.png", sample_png_bytes, "image/png"),
-      "insurance_id": ("insurance-id.png", sample_png_bytes, "image/png"),
+      "insurance_front": ("insurance-front.png", sample_png_bytes, "image/png"),
+      "insurance_back": ("insurance-back.png", sample_png_bytes, "image/png"),
   }
 
   response = client.post("/api/documents/extract", files=files)
@@ -178,6 +222,8 @@ def test_documents_extract_rejects_implausible_driver_license_fields(
   assert payload["patient"]["dateOfBirth"] == "1990-10-31"
   assert payload["patient"]["address"] == ""
   assert payload["insurance"]["payerName"] == "UnitedHealthcare"
+  assert payload["insurance"]["memberPhone"] == "888-201-4709"
+  assert payload["insurance"]["providerWebsite"] == "uhcprovider.com"
   assert "firstName" in payload["missingFields"]
   assert "lastName" in payload["missingFields"]
   assert "address" in payload["missingFields"]
@@ -229,3 +275,23 @@ def test_driver_license_parser_prefers_full_state_name_over_bad_abbreviation():
   assert fields["state"] == "NY"
   assert fields["city"] == "Albany"
   assert fields["postal_code"] == "12222"
+
+
+def test_insurance_parser_rejects_generic_corporate_suffix_for_payer_name():
+  result = OCRDocumentResult(
+      document_type="insurance_front",
+      text="",
+      lines=[
+          "Underwritten by Oxford Health Insurance, Inc.",
+          "UnitedHealthcare",
+          "MEMBER ID 00040560100",
+          "PAYER ID 06111",
+          "GROUP NUMBER 1274551",
+      ],
+      confidence=84.0,
+      variant="thresholded:psm6",
+  )
+
+  fields = extraction_service._extract_insurance_card_fields(result)
+
+  assert fields["payer_name"] == "UnitedHealthcare"

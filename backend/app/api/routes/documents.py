@@ -11,11 +11,13 @@ router = APIRouter()
 @router.post("/extract", response_model=ExtractionResponse)
 async def extract_documents(
     driver_license: UploadFile = File(...),
-    insurance_id: UploadFile = File(...),
+    insurance_front: UploadFile = File(...),
+    insurance_back: UploadFile = File(...),
 ) -> ExtractionResponse:
   uploads = {
       "driver_license": driver_license,
-      "insurance_id": insurance_id,
+      "insurance_front": insurance_front,
+      "insurance_back": insurance_back,
   }
 
   stored_documents = []
