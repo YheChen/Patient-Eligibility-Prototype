@@ -10,6 +10,12 @@ The app demonstrates a front-desk intake flow that:
 4. submits the edited data to a verification API
 5. returns a front-desk summary with coverage, copays, pharmacy details, warnings, discrepancies, raw `271`, and the structured JSON summary returned by the API
 
+## Demo Video
+
+Watch the short demo here:
+
+https://youtu.be/SNQb_Ei9BRU
+
 ## Demo Scope
 
 The current MVP is intentionally frontend-first and prototype-oriented.
